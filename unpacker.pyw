@@ -5,9 +5,12 @@ from math import ceil, log
 import raf
 import util
 
+# TODO: Guess default LoL installation dir
+# moar TODO: make GUI more responsive within files (as opposed to between, now)
+
 class Unpacker(tk.Frame):
 	def __init__(self, master=None):
-		# create a shitty GUI
+		# create a shitty, ugly GUI
 		tk.Frame.__init__(self, master)
 		self.grid()
 		self.settingsCanvas = tk.Canvas(self)
@@ -20,31 +23,76 @@ class Unpacker(tk.Frame):
 		self.extractbase.grid(column=0, row=1)
 		self.extractbaseButt = tk.Button(self.settingsCanvas, text='Extract into', command=self.setExtractBase)
 		self.extractbaseButt.grid(column=1, row=1)
-		self.goButton = tk.Button(self.settingsCanvas, text='Unpack', command=self.go)
+		self.goButton = tk.Button(self.settingsCanvas, text='Unpack', command=self.startjob)
 		self.goButton.grid()
-		self.progress = tk.Text(self, height=20, width=80)
-		self.progress.grid(column=0, row=2)
+		self.progCanv = tk.Canvas(self)
+		self.progCanv.grid()
+		self.progress = tk.Text(self.progCanv, height=20, width=80)
+		self.progress.pack(side="left")
+		self.progScroll = tk.Scrollbar(self.progCanv)
+		self.progScroll.pack(side="right", fill="y", expand=True)
+		self.progress['yscrollcommand'] = self.progScroll.set
 
-	def go(self):
-		basepath = self.lolbase.get() + "/RADS/projects/lol_game_client/filearchives"
-		self.progmsg('Searching ' + basepath + ' for archive files...\n')
-		files = util.findAllRafsIn(basepath)
-		files.sort()
-		self.progmsg(str(len(files)) + ' found, extracting into ' + self.extractbase.get())
+		# this is where information about an ongoing job is stored
+		self.job = {
+			'active': False,
+			'curfile': 0,
+			'nfiles': 0,
+			'files': [],
+			'basepath': '',
+			'extractpath': '',
+			'format': ''}
 
-		i = 1
-		fmt = "[%3d%% %" + str(ceil(log(len(files))/log(10))) + "d/%d] %s"
-		for f in files:
-			self.progmsg(fmt % (int(100*i/len(files)), i, len(files), f))
-			print(fmt % (int(100*i/len(files)), i, len(files), f))
-			self.progress.update_idletasks()
-			r = raf.RAF(f)
-			r.extractAll(basedir=self.extractbase.get())
-			i += 1
-		self.progmsg('Extraction complete.')
+	# startjob - initialize self.job and start processing it
+	def startjob(self):
+		# first off, you are NOT allowed to start two jobs at once, disable goButton
+		self.goButton['state'] = tk.DISABLED
 
-	def progmsg(self, msg):
+		# store paths
+		self.job['basepath'] = self.lolbase.get() + "/RADS/projects/lol_game_client/filearchives"
+		self.job['extractpath'] = self.extractbase.get()
+
+		# find all .raf-files in basepath
+		self.progmsg('Searching ' + self.job['basepath'] + ' for archive files...')
+		self.job['files'] = util.findAllRafsIn(self.job['basepath'])
+		self.job['files'].reverse()
+
+		# save the last info and set job to active
+		# futureproofing: make self.job an array (queue)?
+		self.job['curfile'] = 1
+		self.job['nfiles'] = len(self.job['files'])
+
+		# example format output is [ 83%  80/127] path/to/current/file.raf
+		# args are		      ^    ^   ^  ^
+		self.job['format'] = "[%3d%% %" + str(ceil(log(self.job['nfiles'])/log(10))) + "d/%d] %s"
+		self.job['active'] = True
+
+		# schedule this job to start .5 seconds from now (arbitrary timeout pulled out of an ass)
+		self.after(500, self.stepjob)
+
+	# proceed with the next step of the job
+	def stepjob(self):
+		file = ''
+		try:
+			file = self.job['files'].pop()
+		except IndexError:
+			self.progmsg('Extraction complete.')
+			self.goButton['state'] = tk.NORMAL
+			self.job['active'] = False
+			return
+
+		self.progmsg(self.job['format'] % (int(100*self.job['curfile']/self.job['nfiles']), self.job['curfile'], self.job['nfiles'], file))
+		r = raf.RAF(file)
+		r.extractAll(basedir=self.job['extractpath'])
+		self.job['curfile'] += 1
+		# based on nothing, .1 sec timeout is awesome between files
+		self.after(100, self.stepjob)
+
+	# prints a message to progresswindow
+	def progmsg(self, msg, scrollDown=True):
 		self.progress.insert(tk.END, msg + "\n")
+		if scrollDown:
+			self.progress.see(tk.END)
 
 	def setBaseLoLPath(self):
 		self.lolbase.delete(0, tk.END)
