@@ -11,5 +11,5 @@ class Inibin():
 
 class Troybin():
 	def __init__(self, binfile):
+		raise Exception("not implemented")
 		return
-

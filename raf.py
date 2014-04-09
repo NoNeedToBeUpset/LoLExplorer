@@ -7,6 +7,32 @@ import os, struct, sys, zlib
 RAF_MAGIC = 0x18be0ef0
 
 class RAF():
+	# data fields in RAF:
+	# top level:
+	# file		-	file handle to the opened .raf-file
+	# datfile	-	^ .raf.dat, may be None if we haven't opened it yet
+	# --- fileinfo[key]
+	# key		-	desc
+	# magic		-	magic number read from file, should always be RAF_MAGIC
+	# version	-	version of the RAF archive
+	# rafpath	-	path to the file.raf-archive
+	# rafdatpath	-	^ .raf.dat
+	# managerindex	-	some riot-internal value that we shouldn't modify
+	# filelistoffs	-	offset in .raf to the file list
+	# pathlistoffs	-	^ path list
+	# filecount	-	amount of file-entries
+	# pathcount	-	^ path-entries
+	# pathlistsz	-	size if the entire path list
+	# --- fileinfo['filelist']
+	# pathhash	-	hash of the file's (archive-internal) path
+	# dataoffs	-	offset in .raf.dat to this file's data
+	# datasz	-	size of said data
+	# pathlistidx	-	index into the path list of our path
+	# --- fileinfo['pathlist']
+	# pathoffs	-	offset _from_the_path_list_ of the path
+	# pathlen	-	length of path (including null)
+	# path		-	the path (extracted for our convenience
+	# hash		-	hash (calculated by us)
 	def __init__(self, filename):
 		# we store all our info in a hash ("dict", pyfags)
 		self.fileinfo = {}
