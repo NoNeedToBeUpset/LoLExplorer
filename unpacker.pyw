@@ -1,12 +1,18 @@
 #!/usr/bin/env python
+import os
 import tkinter as tk
 import tkinter.filedialog
+import tkinter.messagebox
 from math import ceil, log
 import raf
 import util
 
-# TODO: Guess default LoL installation dir
 # moar TODO: make GUI more responsive within files (as opposed to between, now)
+# best approach is probably threads, but since I'm lazy that can wait
+
+loldirguesses = ["C:/Program Files (x86)/Riot Games/League of Legends",
+		"C:/Program Files/Riot Games/League of Legends",
+		"C:/Riot Games/League of Legends"]
 
 class Unpacker(tk.Frame):
 	def __init__(self, master=None):
@@ -16,6 +22,10 @@ class Unpacker(tk.Frame):
 		self.settingsCanvas = tk.Canvas(self)
 		self.settingsCanvas.grid()
 		self.lolbase = tk.Entry(self.settingsCanvas, width=80)
+		for guess in loldirguesses:
+			if os.path.exists(guess):
+				self.lolbase.insert(0, guess)
+				break
 		self.lolbase.grid()
 		self.selBaseDirButt = tk.Button(self.settingsCanvas, text='LoL Base Path', command=self.setBaseLoLPath)
 		self.selBaseDirButt.grid(column=1, row=0)
@@ -54,6 +64,7 @@ class Unpacker(tk.Frame):
 
 		# find all .raf-files in basepath
 		self.progmsg('Searching ' + self.job['basepath'] + ' for archive files...')
+		self.progress.update_idletasks()
 		self.job['files'] = util.findAllRafsIn(self.job['basepath'])
 		self.job['files'].reverse()
 
@@ -77,16 +88,18 @@ class Unpacker(tk.Frame):
 			file = self.job['files'].pop()
 		except IndexError:
 			self.progmsg('Extraction complete.')
+			tkinter.messagebox.showinfo(title='Extraction complete', message='All files have been extracted into ' + self.job['extractpath'])
 			self.goButton['state'] = tk.NORMAL
 			self.job['active'] = False
 			return
 
-		self.progmsg(self.job['format'] % (int(100*self.job['curfile']/self.job['nfiles']), self.job['curfile'], self.job['nfiles'], file))
+		ftmp = file.split('/filearchives')[1]
+		self.progmsg(self.job['format'] % (int(100*self.job['curfile']/self.job['nfiles']), self.job['curfile'], self.job['nfiles'], ftmp))
 		r = raf.RAF(file)
-		r.extractAll(basedir=self.job['extractpath'])
+		r.extractAll(basedir=self.job['extractpath'])	
 		self.job['curfile'] += 1
-		# based on nothing, .1 sec timeout is awesome between files
-		self.after(100, self.stepjob)
+		# based on nothing, .15 sec timeout is awesome between files
+		self.after(150, self.stepjob)
 
 	# prints a message to progresswindow
 	def progmsg(self, msg, scrollDown=True):
