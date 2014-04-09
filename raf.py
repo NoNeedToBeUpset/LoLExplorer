@@ -52,6 +52,7 @@ class RAF():
 		self.fileinfo['version'] = self.getULong()
 
 		# managerindex is a value used internally by Riot that we are not allowed to modify :(
+		# TODO: fck shit up with a hex editor
 		self.fileinfo['managerindex'] = self.getULong()
 
 		# offset to the file list
@@ -118,10 +119,14 @@ class RAF():
 	def extract(self, fileentry, basedir="."):
 		if not self.datfile:
 			self.datfile = open(self.fileinfo['rafdatpath'], "rb")
+		elif not self.datfile.readable():
+			self.datfile.close()
+			self.datfile = open(self.fileinfo['rafdatpath'], "rb")
 
 		self.datfile.seek(fileentry['dataoffs'])
 		path = self.fileinfo['pathlist'][fileentry['pathlistidx']]
 
+		# if the hashes do not match... something is horribly wrong
 		if not fileentry['pathhash'] == path['hash']:
 			raise Exception('hashes do not match')
 
