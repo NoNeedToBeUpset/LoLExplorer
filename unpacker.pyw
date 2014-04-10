@@ -10,10 +10,6 @@ import util
 # moar TODO: make GUI more responsive within files (as opposed to between, now)
 # best approach is probably threads, but since I'm lazy that can wait
 
-loldirguesses = ["C:/Program Files (x86)/Riot Games/League of Legends",
-		"C:/Program Files/Riot Games/League of Legends",
-		"C:/Riot Games/League of Legends"]
-
 class Unpacker(tk.Frame):
 	def __init__(self, master=None):
 		# create a shitty, ugly GUI
@@ -22,7 +18,7 @@ class Unpacker(tk.Frame):
 		self.settingsCanvas = tk.Canvas(self)
 		self.settingsCanvas.grid()
 		self.lolbase = tk.Entry(self.settingsCanvas, width=80)
-		for guess in loldirguesses:
+		for guess in util.loldirguesses:
 			if os.path.exists(guess):
 				self.lolbase.insert(0, guess)
 				break
