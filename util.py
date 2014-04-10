@@ -1,7 +1,7 @@
 #!/usr/bin/env python
+# contains miscellaneous utilities
 import os
 import tkinter as tk
-# contains miscellaneous utilities
 
 # common directories for LoL to be installed in
 loldirguesses = ["C:/Program Files (x86)/Riot Games/League of Legends",
@@ -13,9 +13,8 @@ def findAllRafsIn(path):
 	raffiles = []
 	for dirname, dirnames, filenames in os.walk(path):
 		for filename in filenames:
-			file = os.path.join(dirname, filename)
-			if file[-4:] == '.raf':
-				raffiles.append(file)
+			if filename[-4:] == '.raf':
+				raffiles.append(filename)
 	return raffiles
 
 # the first path in loldirguesses is assumed to contain LoL game files

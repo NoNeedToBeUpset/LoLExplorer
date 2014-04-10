@@ -24,8 +24,10 @@ menudef = [
 		('Preferences', lambda:PreferencesDialog().mainloop()),
 	]),
 	('Actions', [
-		('Find archive files', lambda:(updateArchLst(), le.showArchLst())),
+		('Find archive files', lambda:(le.updateArchLst(), le.showArchLst())),
 		('List archive files', lambda:le.showArchLst()),
+		('SEPARATOR', None),
+		('Modify file', lambda:le.modfile()),
 	]),
 	('Help', [
 		('About', lambda:tkinter.messagebox.showinfo(
@@ -33,9 +35,6 @@ menudef = [
 				message=preferences.about['msg'])),
 	]),
 ]
-
-# cache the archives found in loldir
-archlst = []
 
 class ModifyFile(tk.Frame):
 	def __init__(self, master=None):
@@ -45,6 +44,8 @@ class ModifyFile(tk.Frame):
 		self.top.geometry("300x100+50+50")
 
 class LoLExplGUI(tk.Frame):
+	archlst = []
+
 	def __init__(self, master=None, title='LoL Explorer'):
 		tk.Frame.__init__(self, master)
 		self.master.title(title)
@@ -68,53 +69,53 @@ class LoLExplGUI(tk.Frame):
 		# show menubar
 		self.master.config(menu=self.menubar)
 
-		# create a canvas where we do all our work
-		self.workcanvas = tk.Canvas(self)
-		self.workcanvas.pack()
+		# create boxes
+		self.box = {}
+		self.box['archives'] = tk.Listbox(self.master)
+		self.box['files'] = tk.Listbox(self.master)
+		self.box['progress'] = tk.Text(self.master)
 
-		"""self.buttons = {
-			'lel'		: tk.Button(self, text='toplel', command=self.printlel),
-			'modfile'	: tk.Button(self, text='Modify a file', command=self.modfile),
-			'preferences'	: tk.Button(self, text='Preferences', command=self.prefs),
-		}
-
-		for butt in sorted(self.buttons.keys()):
-			self.buttons[butt].pack()"""
-
-		self.welcomelabel = tk.Label(self.workcanvas, text="Welcome! Select something to do from the menu.")
-		self.welcomelabel.pack(anchor='center')
+		self.updateLayout()
 
 	def modfile(self):
 		mfw = ModifyFile(self)
 		mfw.mainloop()
 
-	def prefs(self):
-		pref = PreferencesDialog()
-		pref.mainloop()
-
-	def printlel(self):
-		tkinter.messagebox.showinfo(title='lel', message='wololololololoo')
-
 	def showArchLst(self):
-		tkinter.messagebox.showinfo(title='TODO', message='*list of archive files*')
+		for i in self.archlst:
+			self.box['archives'].insert(0, i)
+
+	def updateArchLst(self):
+		self.archlst = util.findAllRafsIn(preferences.path['loldir'][0] + preferences.path['lolsub'][0])
+
+	# to be called if the window is resized for some reason
+	def updateLayout(self):
+		# we need easy access to the window size
+		w = self.master.winfo_width()
+		h = self.master.winfo_height()
+
+		# first off, the archive list goes on the left
+		self.box['archives'].pack(anchor='w')
 
 class PreferencesDialog(tk.Frame):
 	def __init__(self, master=None):
 		tk.Frame.__init__(self, master)
 		self.top = tk.Toplevel(master)
 		self.top.title("Preferences")
-		self.top.geometry("400x600")
+		self.top.focus_set()
 
 		# display the path preferences
-		self.top.pathframe = tk.LabelFrame(self.top, text="Paths")
+		self.top.pathframe = tk.LabelFrame(self.top, text="Paths", padx=20)
 		self.top.pathframe.grid()
 		self.path = {}
-		for p in preferences.path.keys():
+		for p in sorted(preferences.path.keys()):
 			self.path[p] = (
 				tk.Label(self.top.pathframe, text=preferences.path[p][1]),
-				tk.Entry(self.top.pathframe),
+				tk.Entry(self.top.pathframe, width=40),
 				tk.Button(self.top.pathframe, text='Browse',
 					command=lambda key=p:self.browseForPath(key)))
+
+			# fill in the entry if a value is already set
 			if preferences.path[p][0]:
 				self.path[p][1].insert(0, preferences.path[p][0])
 
@@ -133,9 +134,9 @@ class PreferencesDialog(tk.Frame):
 			util.setEntry(self.path[pathkey][1], newp)
 			preferences.path[pathkey][0] = newp
 
-def updateArchLst():
-	archlst = util.findAllRafsIn(preferences.path['loldir'][0])
-
 root = tk.Tk()
+if preferences.startmaximized:
+	root.state('zoomed')
+
 le = LoLExplGUI(root)
 le.mainloop()

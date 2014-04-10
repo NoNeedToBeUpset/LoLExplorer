@@ -1,3 +1,5 @@
+# contains preferences, mainly default settings
+
 # this versionstring may, at some point, actually have some relevance
 version = "0.1-git"
 
@@ -7,6 +9,8 @@ path = {
 	'lolsub'	: ['/RADS/projects/lol_game_client/filearchives', 'Relative archive location'],
 	'workdir'	: ['work', 'Working Directory'],
 }
+
+startmaximized = True
 
 # info shown in 'About'-popup
 about = {
