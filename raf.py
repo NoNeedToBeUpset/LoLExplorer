@@ -170,6 +170,85 @@ class RAF():
 				hash = hash ^ temp
 		return hash
 
+	# path	  - /path/to/data/file
+	# arcoath - archive internal path
+	def updateFile(self, path, arcpath):
+		# make sure we can both read and write
+		if not (self.file.readable() and self.file.writable()):
+			self.file.close()
+			self.file = open(self.fileinfo['rafpath'], "r+b")
+
+		# open, read and compress file data
+		nfile = open(path, "rb")
+
+		# read, compress, append to zdat, repeat
+		zdat = b''
+		zcompr = zlib.compressobj()
+		while True:
+			dat = nfile.read(4096)	# 4k blocks seems reasonable
+			if not dat:
+				break
+			zdat += zcompr.compress(dat)
+
+		# finalize compression, compressed file data is now in zdat
+		zdat += zcompr.flush()
+
+		# in case arcpath is a string, convert to bytes
+		# if it is already bytes, nothing changes
+		try:
+			arcpath = arcpath.encode('utf-8')
+		except AttributeError:
+			pass
+
+		# then we hash it
+		aphash = self.hashString(arcpath)
+
+		# find the corresponding entry
+		fent = None
+		for ent in self.fileinfo['filelist']:
+			if ent['pathhash'] == aphash:
+				fent = ent
+				break
+
+		# maybe TODO: call some addFile()-func instead
+		if not fent:
+			raise Exception("path not already in file, cannot update")
+
+		# now find the data in the file
+		# skip the entry count, we already know that
+		self.file.seek(self.fileinfo['filelistoffs'] + 4)
+
+		# search for a matching hash
+		i = 0
+		while i < self.fileinfo['filecount']:
+			thash = self.getULong()
+			if thash == aphash:
+				break
+			i += 1
+
+		# we are now at fileentry.dataoffs
+		# if the new data size is smaller than or equal to the old one, we can overwrite the old
+		# data with the new, keep dataoffs intact and adjust datasz. this potentially leaves a gap
+		# after end of current file and start of the next, which we can live with
+		# if new datasz > old datasz, we append the new data to the end of rafdat
+		if fent['datasz'] > len(zdat):
+			df = open(self.fileinfo['rafdatpath'], "ab")
+			newoffs = df.tell()
+			df.write(zdat)
+			df.close()
+			self.file.write(struct.pack('<I', newoffs))
+			self.file.write(struct.pack('<I', len(zdat)))
+		else:
+			df = open(self.fileinfo['rafdatpath'], "r+b")
+			df.seek(fent['dataoffs'])
+			df.write(zdat)
+			df.close()
+			# skip over dataoffs since we need not set it
+			self.file.seek(4, SEEK_CUR)
+			self.file.write(struct.pack('<I', len(zdat)))
+
+		# now the file should be updated
+
 def main():
 	raf = RAF(sys.argv[1])
 	raf.dump()
