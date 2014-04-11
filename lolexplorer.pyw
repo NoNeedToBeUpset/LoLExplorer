@@ -69,13 +69,43 @@ class LoLExplGUI(tk.Frame):
 		# show menubar
 		self.master.config(menu=self.menubar)
 
-		# create boxes
+		# create frames, then put boxes and bars in them
 		self.box = {}
-		self.box['archives'] = tk.Listbox(self.master)
-		self.box['files'] = tk.Listbox(self.master)
-		self.box['progress'] = tk.Text(self.master)
+		self.frame = {}
+		self.scrollb = {}
 
-		self.updateLayout()
+		self.frame['archives'] = tk.LabelFrame(self.master, text='Archive files', padx=5, pady=3)
+		self.frame['files'] = tk.LabelFrame(self.master, text='Files in selected archives', padx=5, pady=3)
+		self.frame['progress'] = tk.LabelFrame(self.master, text='Progress', padx=5, pady=3)
+
+		self.box['archives'] = tk.Listbox(self.frame['archives'], selectmode=tk.EXTENDED)
+		self.box['files'] = tk.Listbox(self.frame['files'], selectmode=tk.EXTENDED)
+		self.box['progress'] = tk.Text(self.frame['progress'])
+
+		"""self.scrollb['archives'] = tk.Scrollbar(self.frame['archives'], orient=tk.VERTICAL, yscrollcommand=self.box['archives'].set)
+		self.scrollb['files'] = tk.Scrollbar(self.frame['files'], orient=tk.VERTICAL, yscrollcommand=self.box['files'].set)
+		self.scrollb['progress'] = tk.Scrollbar(self.frame['progress'], orient=tk.VERTICAL, yscrollcommand=self.box['progress'].set)"""
+
+		self.frame['archives'].pack(anchor='nw')
+		self.frame['files'].pack(anchor='ne')
+		self.frame['progress'].pack(anchor='s')
+
+		"""
+		self.box['archives'].pack()
+		self.box['files'].pack()
+		self.box['progress'].pack()"""
+
+		for k in ['archives', 'files', 'progress']:
+			self.scrollb[k] = tk.Scrollbar(self.frame[k], orient=tk.VERTICAL)#, yscrollcommand=self.box[k].set)
+			self.scrollb[k].config(command=self.box[k].yview)
+			self.box[k].config(yscrollcommand=self.scrollb[k].set)
+			self.box[k].grid(row=0, column=0)
+			self.scrollb[k].grid(row=0, column=1, sticky=tk.N+tk.S)
+
+		"""
+		self.frame['files'] = tk.LabelFrame(self.master, text='Files in selected archives', padx=5, pady=3)
+		self.box['files'] = tk.Listbox(self.)
+		self.box['progress'] = tk.Text(self.master)"""
 
 	def modfile(self):
 		mfw = ModifyFile(self)
@@ -87,15 +117,6 @@ class LoLExplGUI(tk.Frame):
 
 	def updateArchLst(self):
 		self.archlst = util.findAllRafsIn(preferences.path['loldir'][0] + preferences.path['lolsub'][0])
-
-	# to be called if the window is resized for some reason
-	def updateLayout(self):
-		# we need easy access to the window size
-		w = self.master.winfo_width()
-		h = self.master.winfo_height()
-
-		# first off, the archive list goes on the left
-		self.box['archives'].pack(anchor='w')
 
 class PreferencesDialog(tk.Frame):
 	def __init__(self, master=None):
